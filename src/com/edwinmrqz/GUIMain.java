@@ -28,13 +28,18 @@ public class GUIMain extends javax.swing.JFrame {
      */
     public static final boolean DEBUG = true;
 
+    private loadFile lf = null;
+
     public GUIMain() {
         initComponents();
+        txt_hexa.setLineWrap(true);
+        txt_ascii.setLineWrap(true);
+
         menu_file_open.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                txt_ascii.setText("");
                 txt_hexa.setText("");
+                txt_ascii.setText("");
                 fileChooser = new JFileChooser();
                 int returnValue = fileChooser.showOpenDialog(rootPane);
                 if (DEBUG) {
@@ -44,11 +49,24 @@ public class GUIMain extends javax.swing.JFrame {
                 if (returnValue == JFileChooser.APPROVE_OPTION) {
 
                     //user decided for one file, "dont freeze the GUI"
-                    loadFile lf = new loadFile();
+                    lf = new loadFile();
                     lf.execute();
 
                 } else {
                     //operation cancelled by the user
+                }
+            }
+        });
+
+        btn_cancel.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (DEBUG) {
+                    System.out.println("Canceling the application");
+                }
+                if (lf != null) {
+                    lf.cancel(true);
+                    lf = null;
                 }
             }
         });
@@ -66,8 +84,12 @@ public class GUIMain extends javax.swing.JFrame {
 
         fileChooser = new javax.swing.JFileChooser();
         split_panel = new javax.swing.JSplitPane();
-        txt_hexa = new java.awt.TextArea();
-        txt_ascii = new java.awt.TextArea();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        txt_hexa = new javax.swing.JTextArea();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        txt_ascii = new javax.swing.JTextArea();
+        progressBar = new javax.swing.JProgressBar();
+        btn_cancel = new javax.swing.JButton();
         menu_bar = new javax.swing.JMenuBar();
         menu_file = new javax.swing.JMenu();
         menu_file_open = new javax.swing.JMenuItem();
@@ -78,10 +100,19 @@ public class GUIMain extends javax.swing.JFrame {
 
         split_panel.setToolTipText("");
 
-        txt_hexa.setCursor(new java.awt.Cursor(java.awt.Cursor.TEXT_CURSOR));
-        txt_hexa.setName(""); // NOI18N
-        split_panel.setLeftComponent(txt_hexa);
-        split_panel.setRightComponent(txt_ascii);
+        txt_hexa.setColumns(20);
+        txt_hexa.setRows(5);
+        jScrollPane1.setViewportView(txt_hexa);
+
+        split_panel.setLeftComponent(jScrollPane1);
+
+        txt_ascii.setColumns(20);
+        txt_ascii.setRows(5);
+        jScrollPane2.setViewportView(txt_ascii);
+
+        split_panel.setRightComponent(jScrollPane2);
+
+        btn_cancel.setText("cancel");
 
         menu_file.setText("File");
 
@@ -103,12 +134,21 @@ public class GUIMain extends javax.swing.JFrame {
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(split_panel, javax.swing.GroupLayout.DEFAULT_SIZE, 364, Short.MAX_VALUE)
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+            .addComponent(split_panel)
+            .addGroup(layout.createSequentialGroup()
+                .addComponent(progressBar, javax.swing.GroupLayout.DEFAULT_SIZE, 272, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(btn_cancel))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(split_panel, javax.swing.GroupLayout.DEFAULT_SIZE, 298, Short.MAX_VALUE)
+            .addGroup(layout.createSequentialGroup()
+                .addComponent(split_panel, javax.swing.GroupLayout.DEFAULT_SIZE, 254, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(btn_cancel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(progressBar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
         );
 
         pack();
@@ -154,18 +194,22 @@ public class GUIMain extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btn_cancel;
     private javax.swing.JFileChooser fileChooser;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JMenuBar menu_bar;
     private javax.swing.JMenu menu_edit;
     private javax.swing.JMenu menu_file;
     private javax.swing.JMenuItem menu_file_open;
+    private javax.swing.JProgressBar progressBar;
     private javax.swing.JSplitPane split_panel;
-    private java.awt.TextArea txt_ascii;
-    private java.awt.TextArea txt_hexa;
+    private javax.swing.JTextArea txt_ascii;
+    private javax.swing.JTextArea txt_hexa;
     // End of variables declaration//GEN-END:variables
 
-    public class loadFile extends SwingWorker<String[], String[]> {
-        
+    public class loadFile extends SwingWorker<String[], Integer> {
+
         StringBuilder[] result = new StringBuilder[2];
 
         @Override
@@ -180,31 +224,47 @@ public class GUIMain extends javax.swing.JFrame {
                 );
             } catch (FileNotFoundException e) {
                 data_input = null;
-                if (DEBUG)System.out.println("File was not found");
+                if (DEBUG) {
+                    System.out.println("File was not found");
+                }
             }
             if (data_input != null) {
 
                 try {
                     int totalBytes = data_input.available();
+                    int completed = 0;
                     for (int i = 0; i < totalBytes; i++) {
+
                         int data = data_input.readUnsignedByte();
 //                                        txt_hexa.append(Integer.toHexString(data) + " ");
 //                                        txt_ascii.append(String.valueOf((char) data) + " ");
 
                         result[0].append(Integer.toHexString(data));
                         result[0].append(" ");
-                        
-                        char character = (char)data;
-                        if(character < 32 || character > 126)character = '.';
+
+                        char character = (char) data;
+                        if (character < 32 || character > 126) {
+                            character = '.';
+                        }
                         result[1].append(character);
                         result[1].append(" ");
-                        publish(new String[]{result[0].toString(), result[1].toString()});
+                        txt_ascii.setText(result[0].toString());
+                        txt_hexa.setText(result[1].toString());
+
+                        completed = i * 100 / totalBytes;
+                        publish(completed);
+
+                        if (isCancelled()) {
+                            break;
+                        }
 
                     }
                 } catch (IOException ex) {
                     // no data to read
-                    if(DEBUG)System.out.println("IOException " + ex.getMessage());
-                    
+                    if (DEBUG) {
+                        System.out.println("IOException " + ex.getMessage());
+                    }
+
                 }
 
             }
@@ -214,19 +274,18 @@ public class GUIMain extends javax.swing.JFrame {
         @Override
         protected void done() {
             //completed loading the file ----- use this :v
-            txt_hexa.setText(result[0].toString());
-            txt_ascii.setText(result[1].toString());
+//            txt_hexa.setText(result[0].toString());
+//            txt_ascii.setText(result[1].toString());
             if (DEBUG) {
-                System.out.println("Finished the executio");
+                System.out.println("Finished the execution");
             }
 
         }
 
         @Override
-        protected void process(List<String[]> chunks) {
+        protected void process(List<Integer> chunks) {
             super.process(chunks); //To change body of generated methods, choose Tools | Templates.
-            txt_hexa.setText(chunks.get(chunks.size() - 1)[0]);
-            txt_ascii.setText(chunks.get(chunks.size() - 1)[1]);
+            progressBar.setValue(chunks.get(chunks.size() - 1));
         }
     }
 

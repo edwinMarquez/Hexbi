@@ -55,7 +55,7 @@
       <Group type="103" groupAlignment="1" attributes="0">
           <Component id="split_panel" max="32767" attributes="0"/>
           <Group type="102" attributes="0">
-              <Component id="progressBar" pref="272" max="32767" attributes="0"/>
+              <Component id="progressBar" max="32767" attributes="0"/>
               <EmptySpace max="-2" attributes="0"/>
               <Component id="btn_cancel" min="-2" max="-2" attributes="0"/>
           </Group>
@@ -125,6 +125,10 @@
       </SubComponents>
     </Container>
     <Component class="javax.swing.JProgressBar" name="progressBar">
+      <Properties>
+        <Property name="toolTipText" type="java.lang.String" value="File Loading progress"/>
+        <Property name="stringPainted" type="boolean" value="true"/>
+      </Properties>
     </Component>
     <Component class="javax.swing.JButton" name="btn_cancel">
       <Properties>

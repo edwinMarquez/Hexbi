@@ -5,8 +5,11 @@
  */
 package com.edwinmrqz;
 
+import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
@@ -14,8 +17,13 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JFileChooser;
 import javax.swing.SwingWorker;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultHighlighter;
+import javax.swing.text.Highlighter;
 
 /**
  *
@@ -29,11 +37,62 @@ public class GUIMain extends javax.swing.JFrame {
     public static final boolean DEBUG = true;
 
     private loadFile lf = null;
+    private Highlighter txt_ascii_highlighter;
+    private Highlighter txt_hexa_highlighter;
+    private Object ascii_highlight_ref;
+    private Object hex_highlight_ref;
+    private Highlighter.HighlightPainter txt_ascii_h_paint;
+    private Highlighter.HighlightPainter txt_hexa_h_paint;
+    
+    
 
     public GUIMain() {
         initComponents();
-        txt_hexa.setLineWrap(true);
-        txt_ascii.setLineWrap(true);
+//        txt_hexa.setLineWrap(true);
+//        txt_ascii.setLineWrap(true);
+        txt_ascii_highlighter = txt_ascii.getHighlighter();
+        txt_ascii_h_paint = new DefaultHighlighter.DefaultHighlightPainter(Color.BLUE);
+        
+        txt_hexa_highlighter = txt_ascii.getHighlighter();
+        txt_hexa_h_paint = new DefaultHighlighter.DefaultHighlightPainter(Color.RED);
+        
+        try {
+            ascii_highlight_ref = txt_ascii_highlighter.addHighlight(0, 0, txt_ascii_h_paint);
+            txt_hexa_highlighter.addHighlight(0, 0, txt_hexa_h_paint);
+        } catch (BadLocationException ex) {
+            if(DEBUG)System.out.println("error setting the highlighter on initial set up");
+        }
+
+        txt_hexa.addMouseListener(new MouseListener() {
+            @Override
+            public void mouseClicked(MouseEvent e) {}
+
+            @Override
+            public void mousePressed(MouseEvent e) {}
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if(DEBUG)System.out.println("mouse released at: " + txt_hexa.getSelectionStart());
+                int positionOnText = txt_hexa.getSelectionStart();
+                if(positionOnText % 4 > 2){
+                    return;
+                }else{
+                    positionOnText -= positionOnText % 4;
+                }
+                
+                try {
+                    txt_ascii_highlighter.changeHighlight(ascii_highlight_ref,positionOnText, positionOnText+ 1);
+                } catch (BadLocationException ex) {
+                    if(DEBUG)System.out.println("error setting the position for the ascii highlighter");
+                }
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {}
+
+            @Override
+            public void mouseExited(MouseEvent e) {}
+        });
 
         menu_file_open.addActionListener(new ActionListener() {
             @Override
@@ -111,6 +170,9 @@ public class GUIMain extends javax.swing.JFrame {
         jScrollPane2.setViewportView(txt_ascii);
 
         split_panel.setRightComponent(jScrollPane2);
+
+        progressBar.setToolTipText("File Loading progress");
+        progressBar.setStringPainted(true);
 
         btn_cancel.setText("cancel");
 
@@ -208,12 +270,12 @@ public class GUIMain extends javax.swing.JFrame {
     private javax.swing.JTextArea txt_hexa;
     // End of variables declaration//GEN-END:variables
 
-    public class loadFile extends SwingWorker<String[], Integer> {
+    public class loadFile extends SwingWorker<StringBuilder[], Integer> {
 
         StringBuilder[] result = new StringBuilder[2];
 
         @Override
-        protected String[] doInBackground() throws Exception {
+        protected StringBuilder[] doInBackground() throws Exception {
             result[0] = new StringBuilder();
             result[1] = new StringBuilder();
             File file = fileChooser.getSelectedFile();
@@ -236,20 +298,23 @@ public class GUIMain extends javax.swing.JFrame {
                     for (int i = 0; i < totalBytes; i++) {
 
                         int data = data_input.readUnsignedByte();
-//                                        txt_hexa.append(Integer.toHexString(data) + " ");
-//                                        txt_ascii.append(String.valueOf((char) data) + " ");
+                        String hexVal = Integer.toHexString(data);
 
+                        if(hexVal.length() == 1){
+                            result[0].append(0); 
+                            hexVal = "0"+hexVal;
+                        }
                         result[0].append(Integer.toHexString(data));
-                        result[0].append(" ");
+                        txt_hexa.append(hexVal);
+                        txt_hexa.append("  ");
 
                         char character = (char) data;
                         if (character < 32 || character > 126) {
                             character = '.';
                         }
                         result[1].append(character);
-                        result[1].append(" ");
-                        txt_ascii.setText(result[0].toString());
-                        txt_hexa.setText(result[1].toString());
+                        txt_ascii.append(String.valueOf(character));
+                        txt_ascii.append("   ");
 
                         completed = i * 100 / totalBytes;
                         publish(completed);
@@ -268,7 +333,7 @@ public class GUIMain extends javax.swing.JFrame {
                 }
 
             }
-            return new String[]{result[0].toString(), result[1].toString()};
+            return result;
         }
 
         @Override

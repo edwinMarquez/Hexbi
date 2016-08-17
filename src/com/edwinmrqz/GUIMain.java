@@ -294,7 +294,7 @@ public class GUIMain extends javax.swing.JFrame {
 
                 try {
                     int totalBytes = data_input.available();
-                    int completed = 0;
+                    int completed;
                     for (int i = 0; i < totalBytes; i++) {
 
                         int data = data_input.readUnsignedByte();
